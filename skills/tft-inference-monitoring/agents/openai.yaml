@@ -1,0 +1,4 @@
+interface:
+  display_name: "TFT Inference Monitoring"
+  short_description: "Ship batch inference and forecast monitoring"
+  default_prompt: "Use $tft-inference-monitoring to design batch TFT inference, artifact contracts, SLA checks, and forecast monitoring."

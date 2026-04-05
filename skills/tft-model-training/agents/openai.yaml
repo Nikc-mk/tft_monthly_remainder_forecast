@@ -1,0 +1,4 @@
+interface:
+  display_name: "TFT Model Training"
+  short_description: "Train and validate TFT remainder forecasts"
+  default_prompt: "Use $tft-model-training to set up baselines, rolling backtests, and TFT training for monthly remainder forecasting."

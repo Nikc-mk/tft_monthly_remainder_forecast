@@ -1,0 +1,48 @@
+run:
+  mode: full
+  skip_tft: false
+
+paths:
+  raw_input: data/raw_sales.csv
+  work_dir: artifacts/full_run
+  normalized_output: artifacts/full_run/normalized_dataset.csv
+  forecast_output: artifacts/full_run/forecast.csv
+
+data:
+  delimiter: ";"
+  time_column: Week
+  group_column: City
+  target_column: revenue
+  min_history_weeks: 60
+  fill_missing_revenue: 0.0
+  duplicate_policy: sum
+
+features:
+  lag_periods: [1, 2, 4, 8]
+  rolling_windows: [4, 8, 12]
+  holiday_dates: []
+
+training:
+  enable_tft_training: true
+  max_encoder_length: 60
+  max_prediction_length: 8
+  backtest_windows: 6
+  max_epochs: 10
+  batch_size: 64
+  learning_rate: 0.001
+  hidden_size: 64
+  attention_head_size: 4
+  dropout: 0.1
+
+quality_gates:
+  smape_max: 15.0
+  min_improvement_vs_best_baseline: 0.05
+
+inference:
+  forecast_week: null
+  quantiles: [0.1, 0.5, 0.9]
+  sla_seconds_cpu: 10.0
+
+metadata:
+  feature_version: weekly-city-v1
+  model_version: tft-weekly-city-v1

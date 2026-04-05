@@ -1,0 +1,10 @@
+pandas>=2.2
+numpy>=1.26
+torch>=2.2
+lightning>=2.2
+pytorch-forecasting>=1.0
+scikit-learn>=1.4
+holidays>=0.50
+u8darts>=0.29.0
+darts>=0.42.0
+PyYAML>=6.0

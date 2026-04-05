@@ -1,0 +1,3 @@
+model_instructions_file = "../../agents/ml-agent.md"
+model = "gpt-5.4"
+model_reasoning_effort = "medium"

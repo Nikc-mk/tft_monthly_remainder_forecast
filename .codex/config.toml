@@ -1,0 +1,18 @@
+﻿projects."D:\\VS_project\\tft_monthly_remainder_forecast".trust_level = "trusted"
+
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+
+[mcp_servers.openaiDeveloperDocs]
+url = "https://developers.openai.com/mcp"
+
+[agents.architect]
+description = "Use for project architecture, specification, data/feature design, and code validation against spec."
+config_file = "agents/architect.toml"
+nickname_candidates = ["architect"]
+
+[agents.ml]
+description = "Use for model training, backtesting, inference, monitoring, and results validation."
+config_file = "agents/ml.toml"
+nickname_candidates = ["ml"]
+

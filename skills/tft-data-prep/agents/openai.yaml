@@ -1,0 +1,4 @@
+interface:
+  display_name: "TFT Data Prep"
+  short_description: "Prepare leakage-safe TFT forecasting datasets"
+  default_prompt: "Use $tft-data-prep to normalize the time grid, build remainder targets, and design leakage-safe TFT features."
