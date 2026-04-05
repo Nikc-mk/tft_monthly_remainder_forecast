@@ -74,3 +74,33 @@ class ArticleNotebookStructureTests(unittest.TestCase):
         ]
         for snippet in required_snippets:
             self.assertIn(snippet, self.sources)
+
+    def test_notebook_configures_tft_for_project_horizon(self):
+        required_snippets = [
+            "tft_model = TFTModel(",
+            "input_chunk_length=input_len",
+            "output_chunk_length=output_len",
+            "hidden_size=64",
+            "lstm_layers=2",
+            "num_attention_heads=4",
+            "full_attention=True",
+            "hidden_continuous_size=16",
+            "QuantileRegression(",
+            "quantiles=[0.1, 0.5, 0.9]",
+        ]
+        for snippet in required_snippets:
+            self.assertIn(snippet, self.sources)
+
+    def test_notebook_contains_prediction_metrics_and_explainer(self):
+        required_snippets = [
+            "tft_model.fit(",
+            "tft_model.predict(",
+            "target_static_scaler.inverse_transform(",
+            "target_series_scaler.inverse_transform(",
+            "def wape(actual, predicted):",
+            "TFTExplainer(",
+            "explainer.plot_variable_selection(",
+            "explainer.plot_attention(",
+        ]
+        for snippet in required_snippets:
+            self.assertIn(snippet, self.sources)
