@@ -34,3 +34,19 @@ class ArticleNotebookStructureTests(unittest.TestCase):
         ]
         for heading in required_headings:
             self.assertIn(heading, self.sources)
+
+    def test_notebook_reads_project_sales_file(self):
+        self.assertIn('pd.read_csv("data/sales.csv", sep=";")', self.sources)
+
+    def test_notebook_builds_weekly_grid_and_leakage_safe_features(self):
+        required_snippets = [
+            'freq="W-MON"',
+            'df["date"] = pd.to_datetime(df["Week"])',
+            'df.groupby(["City", "date"], as_index=False)["revenue"]',
+            'shifted = df.groupby("City")["revenue"].shift(1)',
+            'df["lag_1"] = shifted',
+            'df["rolling_4"] = shifted.groupby(df["City"]).rolling(4).mean()',
+            'df["rolling_12"] = shifted.groupby(df["City"]).rolling(12).mean()',
+        ]
+        for snippet in required_snippets:
+            self.assertIn(snippet, self.sources)
