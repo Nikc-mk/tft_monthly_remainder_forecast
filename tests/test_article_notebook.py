@@ -50,3 +50,27 @@ class ArticleNotebookStructureTests(unittest.TestCase):
         ]
         for snippet in required_snippets:
             self.assertIn(snippet, self.sources)
+
+    def test_notebook_uses_darts_grouped_series_and_scalers(self):
+        required_snippets = [
+            "TimeSeries.from_group_dataframe(",
+            'group_cols="City"',
+            'time_col="date"',
+            'value_cols="revenue"',
+            "Scaler(",
+            "StaticCovariatesTransformer(",
+            "StandardScaler()",
+            "MinMaxScaler(feature_range=(0, 1))",
+        ]
+        for snippet in required_snippets:
+            self.assertIn(snippet, self.sources)
+
+    def test_notebook_uses_weekly_encoder_decoder_lengths(self):
+        required_snippets = [
+            "input_len = 60",
+            "output_len = 8",
+            "window_len = input_len + output_len",
+            "def series_splitter(series_list: List[TimeSeries]):",
+        ]
+        for snippet in required_snippets:
+            self.assertIn(snippet, self.sources)
