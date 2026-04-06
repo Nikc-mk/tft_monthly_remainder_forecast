@@ -32,16 +32,10 @@ class DataPipelineTests(unittest.TestCase):
         training_frame = build_training_frame(self.raw_df, self.config)
         required_columns = {
             "week_start",
+            "week_idx",
             "City",
             "weekly_revenue",
             "is_missing",
-            "lag_1",
-            "lag_2",
-            "lag_4",
-            "lag_8",
-            "rolling_4",
-            "rolling_8",
-            "rolling_12",
             "week_of_year",
             "month",
             "quarter",
@@ -49,6 +43,24 @@ class DataPipelineTests(unittest.TestCase):
             "is_holiday_week",
         }
         self.assertTrue(required_columns.issubset(training_frame.columns))
+
+    def test_build_training_frame_adds_global_week_idx_from_zero(self):
+        training_frame = build_training_frame(self.raw_df, self.config)
+        week_index = (
+            training_frame.loc[:, ["week_start", "week_idx"]]
+            .drop_duplicates()
+            .sort_values("week_start")
+            .reset_index(drop=True)
+        )
+
+        expected_idx = list(range(len(week_index)))
+        self.assertEqual(week_index["week_idx"].tolist(), expected_idx)
+        self.assertEqual(int(week_index.iloc[0]["week_idx"]), 0)
+
+    def test_build_training_frame_does_not_add_lag_or_rolling_features(self):
+        training_frame = build_training_frame(self.raw_df, self.config)
+        removed_columns = {"lag_1", "lag_2", "lag_4", "lag_8", "rolling_4", "rolling_8", "rolling_12"}
+        self.assertTrue(removed_columns.isdisjoint(training_frame.columns))
 
     def test_build_training_frame_fills_missing_weeks_and_sums_duplicates(self):
         training_frame = build_training_frame(self.raw_df, self.config)
@@ -89,6 +101,7 @@ class DataPipelineTests(unittest.TestCase):
         self.assertIn("past_covariates_by_city", series_data)
         self.assertIn("future_covariates_by_city", series_data)
         self.assertTrue(series_data["target_series_by_city"])
+        self.assertIsNone(series_data["past_covariates_by_city"])
 
     def test_build_darts_series_keeps_city_as_series_identity_not_future_covariate(self):
         training_frame = build_training_frame(self.raw_df, self.config)
@@ -104,7 +117,10 @@ class DataPipelineTests(unittest.TestCase):
         future_covariates = series_data["future_covariates_by_city"][city]
 
         self.assertNotIn("City", future_covariates.components)
-        self.assertEqual(list(future_covariates.components), ["week_of_year", "month", "quarter", "year", "is_holiday_week"])
+        self.assertEqual(
+            list(future_covariates.components),
+            ["week_idx", "week_of_year", "month", "quarter", "year", "is_holiday_week"],
+        )
         self.assertIn("city_code", target_series.static_covariates.columns)
         self.assertIn("city_code", future_covariates.static_covariates.columns)
         self.assertEqual(len(future_covariates), len(target_series) + self.config["training"]["max_prediction_length"])

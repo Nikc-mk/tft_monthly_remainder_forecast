@@ -55,7 +55,7 @@
 
 Нормализованный недельный слой:
 
-`week_start | City | weekly_revenue | is_missing`
+`week_start | week_idx | City | weekly_revenue | is_missing`
 
 Характеристики:
 
@@ -63,6 +63,7 @@
 - модельная частота: weekly
 - `revenue` во входе трактуется как недельная сумма продаж для `Week`
 - в нормализованном слое целевая колонка хранится как `weekly_revenue`
+- `week_idx` задаёт сквозной индекс недели от `0` для первой используемой недели данных
 - возможны отрицательные значения
 - возможны пропуски дат и недель
 
@@ -142,17 +143,8 @@ Future covariates:
 
 Past covariates:
 
-- `lag_1`
-- `lag_2`
-- `lag_4`
-- `lag_8`
-- `rolling_4`
-- `rolling_8`
-- `rolling_12`
-
-Обязательное правило:
-
-`rolling = weekly_revenue.shift(1).rolling(...)`
+- не используются в текущем TFT runtime
+- TFT получает историю `weekly_revenue` напрямую из target series без ручных lag/rolling признаков
 
 ## Моделирование и валидация
 

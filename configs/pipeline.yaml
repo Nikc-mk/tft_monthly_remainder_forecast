@@ -29,7 +29,7 @@ training:
   max_encoder_length: 60
   max_prediction_length: 8
   backtest_windows: 6
-  max_epochs: 1000
+  max_epochs: 10
   batch_size: 64
   learning_rate: 0.001
   hidden_size: 64

@@ -12,12 +12,16 @@ def generate_forecast(series_data: dict[str, object], tft_model, config: dict) -
     generated_at = pd.Timestamp.now(tz="UTC").tz_localize(None)
     forecast_week = pd.Timestamp(series_data["forecast_week"]).normalize()
     for city, series in series_data["target_series_by_city"].items():
+        predict_kwargs = {
+            "n": horizon,
+            "series": series,
+            "future_covariates": series_data["future_covariates_by_city"][city],
+            "num_samples": 100,
+        }
+        if series_data["past_covariates_by_city"] is not None:
+            predict_kwargs["past_covariates"] = series_data["past_covariates_by_city"][city]
         prediction = tft_model.predict(
-            n=horizon,
-            series=series,
-            past_covariates=series_data["past_covariates_by_city"][city],
-            future_covariates=series_data["future_covariates_by_city"][city],
-            num_samples=100,
+            **predict_kwargs,
         )
         q01 = prediction.quantile(0.1).values().reshape(-1)
         q05 = prediction.quantile(0.5).values().reshape(-1)

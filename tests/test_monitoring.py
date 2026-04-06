@@ -16,7 +16,6 @@ class FakeTFTModel:
     def __init__(self, residual_series: list[TimeSeries]):
         self._residual_series = residual_series
         self.training_series_by_city = {f"City_{idx}": series for idx, series in enumerate(residual_series, start=1)}
-        self.training_past_covariates_by_city = self.training_series_by_city
         self.training_future_covariates_by_city = self.training_series_by_city
 
     def residuals(self, *args, **kwargs):

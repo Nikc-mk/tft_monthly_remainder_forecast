@@ -93,19 +93,22 @@ def _build_aggregate_tft_residual_series(tft_model: object) -> TimeSeries | None
     training_series_by_city = getattr(tft_model, "training_series_by_city", None)
     training_past_covariates_by_city = getattr(tft_model, "training_past_covariates_by_city", None)
     training_future_covariates_by_city = getattr(tft_model, "training_future_covariates_by_city", None)
-    if not training_series_by_city or not training_past_covariates_by_city or not training_future_covariates_by_city:
+    if not training_series_by_city or not training_future_covariates_by_city:
         return None
 
-    residual_series = tft_model.residuals(
-        series=list(training_series_by_city.values()),
-        past_covariates=list(training_past_covariates_by_city.values()),
-        future_covariates=list(training_future_covariates_by_city.values()),
-        forecast_horizon=1,
-        retrain=False,
-        last_points_only=True,
-        verbose=False,
-        show_warnings=False,
-    )
+    residual_kwargs = {
+        "series": list(training_series_by_city.values()),
+        "future_covariates": list(training_future_covariates_by_city.values()),
+        "forecast_horizon": 1,
+        "retrain": False,
+        "last_points_only": True,
+        "verbose": False,
+        "show_warnings": False,
+    }
+    if training_past_covariates_by_city:
+        residual_kwargs["past_covariates"] = list(training_past_covariates_by_city.values())
+
+    residual_series = tft_model.residuals(**residual_kwargs)
     if not residual_series:
         return None
 

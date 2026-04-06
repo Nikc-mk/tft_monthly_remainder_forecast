@@ -146,10 +146,18 @@ class TrainingTests(unittest.TestCase):
         prediction = tft_model.predict(
             n=self.config["training"]["max_prediction_length"],
             series=self.series_data["target_series_by_city"][city],
-            past_covariates=self.series_data["past_covariates_by_city"][city],
             future_covariates=self.series_data["future_covariates_by_city"][city],
             num_samples=20,
         )
 
         self.assertEqual(len(prediction), self.config["training"]["max_prediction_length"])
         self.assertGreater(prediction.n_samples, 1)
+
+    @patch("pipeline.training.TFTModel")
+    def test_train_tft_does_not_pass_past_covariates_to_fit(self, mock_tft_model):
+        model_instance = MagicMock()
+        mock_tft_model.return_value = model_instance
+
+        train_tft(self.series_data, self.config)
+
+        self.assertNotIn("past_covariates", model_instance.fit.call_args.kwargs)

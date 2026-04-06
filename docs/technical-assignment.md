@@ -45,7 +45,7 @@
 
 После нормализации и заполнения пропусков рабочий ряд имеет вид:
 
-`week_start | City | weekly_revenue | is_missing`
+`week_start | week_idx | City | weekly_revenue | is_missing`
 
 ### Гарантии
 
@@ -65,6 +65,8 @@
 
 ### 4.2 Time-varying known
 
+- `week_idx`
+  сквозной индекс недели от `0` для первой используемой недели данных
 - `week_of_year`
 - `month`
 - `quarter`
@@ -74,18 +76,9 @@
 
 ### 4.3 Time-varying unknown
 
-Лаги:
+В текущем weekly runtime ручные lag/rolling признаки не используются.
 
-- `lag_1`
-- `lag_2`
-- `lag_4`
-- `lag_8`
-
-Rolling с обязательным `shift(1)`:
-
-- `rolling_4`
-- `rolling_8`
-- `rolling_12`
+TFT получает историческую динамику напрямую из target series `weekly_revenue`.
 
 Запрещено:
 

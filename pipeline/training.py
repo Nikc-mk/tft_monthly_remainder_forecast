@@ -24,7 +24,7 @@ class RuntimeTFTScalers:
 
     city_by_code: dict[float, str]
     target_scalers_by_city: dict[str, StandardScaler]
-    past_scalers_by_city: dict[str, StandardScaler]
+    past_scalers_by_city: dict[str, StandardScaler] | None
     future_scaler: MinMaxScaler
     static_scaler: MinMaxScaler
 
@@ -110,10 +110,12 @@ def _fit_runtime_tft_scalers(series_data: dict[str, object]) -> RuntimeTFTScaler
         city: StandardScaler().fit(_series_values(series).reshape(-1, 1))
         for city, series in target_series_by_city.items()
     }
-    past_scalers_by_city = {
-        city: StandardScaler().fit(series.values(copy=False))
-        for city, series in past_covariates_by_city.items()
-    }
+    past_scalers_by_city = None
+    if past_covariates_by_city:
+        past_scalers_by_city = {
+            city: StandardScaler().fit(series.values(copy=False))
+            for city, series in past_covariates_by_city.items()
+        }
     future_scaler = MinMaxScaler(feature_range=(0.0, 1.0)).fit(
         np.vstack([series.values(copy=False) for series in future_covariates_by_city.values()])
     )
@@ -130,6 +132,16 @@ def _fit_runtime_tft_scalers(series_data: dict[str, object]) -> RuntimeTFTScaler
 
 
 def _scale_series_data_for_tft(series_data: dict[str, object], scalers: RuntimeTFTScalers) -> dict[str, object]:
+    past_covariates_by_city = None
+    if series_data["past_covariates_by_city"] and scalers.past_scalers_by_city:
+        past_covariates_by_city = {
+            city: _series_with_transformed_values(
+                series,
+                scalers.past_scalers_by_city[city],
+                scalers.static_scaler,
+            )
+            for city, series in series_data["past_covariates_by_city"].items()
+        }
     return {
         "target_series_by_city": {
             city: _series_with_transformed_values(
@@ -139,14 +151,7 @@ def _scale_series_data_for_tft(series_data: dict[str, object], scalers: RuntimeT
             )
             for city, series in series_data["target_series_by_city"].items()
         },
-        "past_covariates_by_city": {
-            city: _series_with_transformed_values(
-                series,
-                scalers.past_scalers_by_city[city],
-                scalers.static_scaler,
-            )
-            for city, series in series_data["past_covariates_by_city"].items()
-        },
+        "past_covariates_by_city": past_covariates_by_city,
         "future_covariates_by_city": {
             city: _series_with_transformed_values(
                 series,
@@ -166,28 +171,32 @@ def _predict_with_runtime_scaling(
     future_covariates: TimeSeries | None = None,
     **kwargs: object,
 ) -> TimeSeries:
-    if series is None or past_covariates is None or future_covariates is None:
-        raise ValueError("Runtime TFT predict requires series, past_covariates, and future_covariates")
+    if series is None or future_covariates is None:
+        raise ValueError("Runtime TFT predict requires series and future_covariates")
     city_code = _city_code_from_series(series)
     city = self.runtime_tft_scalers.city_by_code[city_code]
-    scaled_prediction = self._raw_predict(
-        n=n,
-        series=_series_with_transformed_values(
+    predict_kwargs = {
+        "n": n,
+        "series": _series_with_transformed_values(
             series,
             self.runtime_tft_scalers.target_scalers_by_city[city],
             self.runtime_tft_scalers.static_scaler,
         ),
-        past_covariates=_series_with_transformed_values(
-            past_covariates,
-            self.runtime_tft_scalers.past_scalers_by_city[city],
-            self.runtime_tft_scalers.static_scaler,
-        ),
-        future_covariates=_series_with_transformed_values(
+        "future_covariates": _series_with_transformed_values(
             future_covariates,
             self.runtime_tft_scalers.future_scaler,
             self.runtime_tft_scalers.static_scaler,
         ),
         **kwargs,
+    }
+    if past_covariates is not None and self.runtime_tft_scalers.past_scalers_by_city:
+        predict_kwargs["past_covariates"] = _series_with_transformed_values(
+            past_covariates,
+            self.runtime_tft_scalers.past_scalers_by_city[city],
+            self.runtime_tft_scalers.static_scaler,
+        )
+    scaled_prediction = self._raw_predict(
+        **predict_kwargs,
     )
     return _series_with_transformed_values(
         scaled_prediction,
@@ -261,16 +270,20 @@ def _get_tft_quantiles(config: dict) -> list[float]:
 def _predict_tft_quantiles(
     tft_model: TFTModel,
     series: TimeSeries,
-    past_covariates: TimeSeries,
+    past_covariates: TimeSeries | None,
     future_covariates: TimeSeries,
     horizon: int,
 ) -> dict[float, np.ndarray]:
+    predict_kwargs = {
+        "n": horizon,
+        "series": series,
+        "future_covariates": future_covariates,
+        "num_samples": TFT_PREDICT_SAMPLES,
+    }
+    if past_covariates is not None:
+        predict_kwargs["past_covariates"] = past_covariates
     prediction = tft_model.predict(
-        n=horizon,
-        series=series,
-        past_covariates=past_covariates,
-        future_covariates=future_covariates,
-        num_samples=TFT_PREDICT_SAMPLES,
+        **predict_kwargs,
     )
     return {
         0.1: prediction.quantile(0.1).values().reshape(-1).astype(float),
@@ -310,12 +323,14 @@ def train_tft(series_data: dict[str, object], config: dict) -> TFTModel:
         optimizer_kwargs={"lr": float(config["training"]["learning_rate"])},
         pl_trainer_kwargs=_tft_trainer_kwargs(config),
     )
-    tft_model.fit(
-        series=list(scaled_series_data["target_series_by_city"].values()),
-        past_covariates=list(scaled_series_data["past_covariates_by_city"].values()),
-        future_covariates=list(scaled_series_data["future_covariates_by_city"].values()),
-        verbose=True,
-    )
+    fit_kwargs = {
+        "series": list(scaled_series_data["target_series_by_city"].values()),
+        "future_covariates": list(scaled_series_data["future_covariates_by_city"].values()),
+        "verbose": True,
+    }
+    if scaled_series_data["past_covariates_by_city"] is not None:
+        fit_kwargs["past_covariates"] = list(scaled_series_data["past_covariates_by_city"].values())
+    tft_model.fit(**fit_kwargs)
     tft_model.runtime_tft_scalers = runtime_tft_scalers
     tft_model._raw_predict = tft_model.predict
     tft_model.predict = MethodType(_predict_with_runtime_scaling, tft_model)
@@ -339,7 +354,9 @@ def run_backtest(
         if len(series) < horizon + windows:
             raise ValueError(f"Series for city '{city}' is too short for the configured backtest")
         values = _series_values(series)
-        city_past_covariates = series_data["past_covariates_by_city"][city]
+        city_past_covariates = None
+        if series_data["past_covariates_by_city"] is not None:
+            city_past_covariates = series_data["past_covariates_by_city"][city]
         city_future_covariates = series_data["future_covariates_by_city"][city]
         for window_id in range(1, windows + 1):
             start_idx = len(values) - horizon - windows + window_id - 1
@@ -395,7 +412,11 @@ def evaluate_holdout(test_frame: pd.DataFrame, tft_model, baselines: dict[str, o
             "tft": _predict_tft_quantiles(
                 tft_model,
                 series=history_series,
-                past_covariates=tft_model.training_past_covariates_by_city[city],
+                past_covariates=(
+                    None
+                    if tft_model.training_past_covariates_by_city is None
+                    else tft_model.training_past_covariates_by_city[city]
+                ),
                 future_covariates=tft_model.training_future_covariates_by_city[city],
                 horizon=horizon,
             )[0.5],

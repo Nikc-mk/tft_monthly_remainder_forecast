@@ -7,8 +7,8 @@ import pandas as pd
 from darts import TimeSeries
 
 
-PAST_FEATURES = ["lag_1", "lag_2", "lag_4", "lag_8", "rolling_4", "rolling_8", "rolling_12"]
-FUTURE_FEATURES = ["week_of_year", "month", "quarter", "year", "is_holiday_week"]
+PAST_FEATURES: list[str] = []
+FUTURE_FEATURES = ["week_idx", "week_of_year", "month", "quarter", "year", "is_holiday_week"]
 
 
 def validate_raw_frame(raw_df: pd.DataFrame, config: dict) -> None:
@@ -76,6 +76,14 @@ def _normalize_weekly_frame(raw_df: pd.DataFrame, config: dict) -> pd.DataFrame:
     return pd.concat(city_frames, ignore_index=True).sort_values(["City", "week_start"]).reset_index(drop=True)
 
 
+def _add_week_idx(frame: pd.DataFrame) -> pd.DataFrame:
+    """Добавить сквозной индекс недели от минимального доступного week_start."""
+    frame = frame.copy()
+    min_week_start = frame["week_start"].min()
+    frame["week_idx"] = ((frame["week_start"] - min_week_start) / pd.Timedelta(weeks=1)).astype(int)
+    return frame
+
+
 def _add_calendar_features(frame: pd.DataFrame, config: dict) -> pd.DataFrame:
     frame = frame.copy()
     iso_calendar = frame["week_start"].dt.isocalendar()
@@ -93,27 +101,12 @@ def _add_calendar_features(frame: pd.DataFrame, config: dict) -> pd.DataFrame:
     return frame
 
 
-def _add_past_features(frame: pd.DataFrame) -> pd.DataFrame:
-    """Добавить лаги и скользящие признаки через shift(1), чтобы избежать утечки."""
-    frame = frame.copy()
-    by_city = frame.groupby("City")["weekly_revenue"]
-    shifted = by_city.shift(1)
-    frame["lag_1"] = shifted
-    frame["lag_2"] = by_city.shift(2)
-    frame["lag_4"] = by_city.shift(4)
-    frame["lag_8"] = by_city.shift(8)
-    frame["rolling_4"] = shifted.groupby(frame["City"]).rolling(4).mean().reset_index(level=0, drop=True)
-    frame["rolling_8"] = shifted.groupby(frame["City"]).rolling(8).mean().reset_index(level=0, drop=True)
-    frame["rolling_12"] = shifted.groupby(frame["City"]).rolling(12).mean().reset_index(level=0, drop=True)
-    return frame
-
-
 def _build_feature_frame(raw_df: pd.DataFrame, config: dict, forecast_week: pd.Timestamp | None = None) -> pd.DataFrame:
     frame = _normalize_weekly_frame(raw_df, config)
     if forecast_week is not None:
         frame = frame.loc[frame["week_start"] <= pd.Timestamp(forecast_week).normalize()].copy()
+    frame = _add_week_idx(frame)
     frame = _add_calendar_features(frame, config)
-    frame = _add_past_features(frame)
     return frame.reset_index(drop=True)
 
 
@@ -156,19 +149,13 @@ def build_inference_frame(
                     "City": city,
                     "weekly_revenue": np.nan,
                     "is_missing": 1,
-                    "lag_1": np.nan,
-                    "lag_2": np.nan,
-                    "lag_4": np.nan,
-                    "lag_8": np.nan,
-                    "rolling_4": np.nan,
-                    "rolling_8": np.nan,
-                    "rolling_12": np.nan,
                 }
             )
 
     future_frame = pd.DataFrame(future_rows)
     future_frame = _add_calendar_features(future_frame, config)
     combined = pd.concat([observed_frame, future_frame], ignore_index=True, sort=False)
+    combined = _add_week_idx(combined)
     return combined.sort_values(["City", "week_start"]).reset_index(drop=True)
 
 
@@ -185,23 +172,12 @@ def build_darts_series(frame: pd.DataFrame, config: dict) -> dict[str, object]:
     """Преобразовать подготовленный недельный фрейм в Darts-серии цели и ковариат по городам."""
     fill_value = float(config["data"]["fill_missing_revenue"])
     observed_frame = frame.loc[frame["weekly_revenue"].notna()].copy()
-    past_frame = observed_frame.copy()
-    past_frame[PAST_FEATURES] = past_frame[PAST_FEATURES].fillna(fill_value)
 
     target_series = TimeSeries.from_group_dataframe(
         df=observed_frame,
         group_cols="City",
         time_col="week_start",
         value_cols="weekly_revenue",
-        fill_missing_dates=True,
-        freq="W-MON",
-        fillna_value=fill_value,
-    )
-    past_covariates = TimeSeries.from_group_dataframe(
-        df=past_frame,
-        group_cols="City",
-        time_col="week_start",
-        value_cols=PAST_FEATURES,
         fill_missing_dates=True,
         freq="W-MON",
         fillna_value=fill_value,
@@ -218,9 +194,7 @@ def build_darts_series(frame: pd.DataFrame, config: dict) -> dict[str, object]:
     target_by_city = _encode_numeric_static_covariates(
         {city: series for city, series in zip(observed_frame["City"].drop_duplicates(), target_series)}
     )
-    past_by_city = _encode_numeric_static_covariates(
-        {city: series for city, series in zip(observed_frame["City"].drop_duplicates(), past_covariates)}
-    )
+    past_by_city = None
     future_by_city = _encode_numeric_static_covariates(
         {city: series for city, series in zip(frame["City"].drop_duplicates(), future_covariates)}
     )
