@@ -104,3 +104,8 @@ class ArticleNotebookStructureTests(unittest.TestCase):
         ]
         for snippet in required_snippets:
             self.assertIn(snippet, self.sources)
+
+    def test_notebook_readme_mentions_new_article_adaptation(self):
+        readme_text = Path("notebooks/README.md").read_text(encoding="utf-8")
+        self.assertIn("darts_tft_weekly_city_article.ipynb", readme_text)
+        self.assertIn("research only", readme_text.lower())

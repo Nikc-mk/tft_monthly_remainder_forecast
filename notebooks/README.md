@@ -8,6 +8,10 @@ Use this directory for:
 - one-off validation checks
 - documenting research findings
 
+Key notebooks:
+- `tft_darts_pipeline.ipynb` - legacy reference notebook with older experiment flow
+- `darts_tft_weekly_city_article.ipynb` - article-style weekly `City` TFT adaptation for `data/sales.csv`
+
 Repository rules:
 - notebooks must not contain runtime logic
 - notebooks must not become the canonical batch entrypoint
