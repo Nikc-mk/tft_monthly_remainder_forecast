@@ -132,6 +132,29 @@ class ArticleNotebookStructureTests(unittest.TestCase):
         for snippet in required_snippets:
             self.assertIn(snippet, self.sources)
 
+    def test_notebook_disables_darts_notebook_progress_bar_during_predict(self):
+        predict_cells = [
+            "".join(cell.get("source", []))
+            for cell in self.notebook["cells"]
+            if "tft_model.predict(" in "".join(cell.get("source", []))
+        ]
+        self.assertEqual(len(predict_cells), 1)
+        self.assertIn("verbose=False", predict_cells[0])
+        self.assertNotIn("verbose=True", predict_cells[0])
+
+    def test_notebook_resets_existing_tft_run_artifacts_before_training(self):
+        fit_cells = [
+            "".join(cell.get("source", []))
+            for cell in self.notebook["cells"]
+            if "tft_model = TFTModel(" in "".join(cell.get("source", []))
+        ]
+        self.assertEqual(len(fit_cells), 1)
+        self.assertIn("force_reset=True", fit_cells[0])
+
+    def test_notebook_uses_current_darts_quantile_api(self):
+        self.assertIn("pred_test.quantile(0.5)", self.sources)
+        self.assertNotIn("pred_test.quantile_timeseries(0.5)", self.sources)
+
     def test_notebook_readme_mentions_new_article_adaptation(self):
         readme_text = Path("notebooks/README.md").read_text(encoding="utf-8")
         self.assertIn("darts_tft_weekly_city_article.ipynb", readme_text)
