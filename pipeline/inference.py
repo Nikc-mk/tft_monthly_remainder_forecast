@@ -1,4 +1,4 @@
-"""Forecast formatting utilities for the weekly city runtime."""
+"""Утилиты форматирования прогноза для недельного рантайма по городам."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import pandas as pd
 
 
 def generate_forecast(series_data: dict[str, object], tft_model, config: dict) -> pd.DataFrame:
-    """Generate the final forecast table with one row per city and target week."""
+    """Сформировать итоговую таблицу прогноза с одной строкой на город и целевую неделю."""
     rows: list[dict[str, object]] = []
     horizon = int(config["training"]["max_prediction_length"])
     generated_at = pd.Timestamp.now(tz="UTC").tz_localize(None)

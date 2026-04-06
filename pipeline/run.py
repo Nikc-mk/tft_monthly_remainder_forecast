@@ -1,4 +1,4 @@
-"""CLI entrypoint for the weekly city forecasting runtime."""
+"""CLI-точка входа для недельного рантайма прогнозирования по городам."""
 
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ def _report_stage(progress_reporter: Callable[[int, int, str], None], stage_inde
 
 
 def run_pipeline(config: dict, progress_reporter: Callable[[int, int, str], None] | None = None) -> int:
-    """Run the full weekly runtime and persist forecast, holdout, and monitoring artifacts."""
+    """Запустить полный недельный рантайм и сохранить прогноз, holdout и артефакты мониторинга."""
     start = time.perf_counter()
     work_dir = Path(config["paths"]["work_dir"])
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -110,7 +110,7 @@ def run_pipeline(config: dict, progress_reporter: Callable[[int, int, str], None
 
 
 def main() -> int:
-    """Parse CLI arguments, load config, and execute the weekly runtime."""
+    """Разобрать аргументы CLI, загрузить конфиг и выполнить недельный рантайм."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
     args = parser.parse_args()

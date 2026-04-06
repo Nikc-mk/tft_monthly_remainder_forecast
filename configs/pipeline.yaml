@@ -3,7 +3,7 @@ run:
   skip_tft: false
 
 paths:
-  raw_input: data/raw_sales.csv
+  raw_input: data/sales.csv
   work_dir: artifacts/full_run
   normalized_output: artifacts/full_run/normalized_dataset.csv
   forecast_output: artifacts/full_run/forecast.csv
@@ -24,10 +24,12 @@ features:
 
 training:
   enable_tft_training: true
+  accelerator: auto
+  devices: 1
   max_encoder_length: 60
   max_prediction_length: 8
   backtest_windows: 6
-  max_epochs: 10
+  max_epochs: 1000
   batch_size: 64
   learning_rate: 0.001
   hidden_size: 64

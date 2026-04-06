@@ -1,4 +1,4 @@
-"""Public exports for the weekly city forecasting runtime."""
+"""Публичные экспорты рантайма недельного прогнозирования по городам."""
 
 from pipeline.config import load_pipeline_config, validate_pipeline_config
 from pipeline.data_pipeline import build_darts_series, build_inference_frame, build_test_frame, build_training_frame

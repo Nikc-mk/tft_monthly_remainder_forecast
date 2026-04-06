@@ -15,6 +15,12 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config["training"]["max_prediction_length"], 8)
         self.assertEqual(config["features"]["lag_periods"], [1, 2, 4, 8])
 
+    def test_load_pipeline_config_reads_training_device_settings(self):
+        path = Path("tests/fixtures/pipeline_valid.yaml")
+        config = load_pipeline_config(path)
+        self.assertEqual(config["training"]["accelerator"], "auto")
+        self.assertEqual(config["training"]["devices"], 1)
+
     def test_validate_pipeline_config_rejects_wrong_horizon(self):
         config = {
             "training": {

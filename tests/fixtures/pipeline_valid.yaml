@@ -20,6 +20,8 @@ features:
   holiday_dates: []
 training:
   enable_tft_training: true
+  accelerator: auto
+  devices: 1
   max_encoder_length: 60
   max_prediction_length: 8
   backtest_windows: 6

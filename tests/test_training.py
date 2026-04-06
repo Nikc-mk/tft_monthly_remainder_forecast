@@ -24,6 +24,8 @@ def _lightweight_tft_config() -> dict:
     config["training"]["attention_head_size"] = 1
     config["training"]["batch_size"] = 8
     config["training"]["learning_rate"] = 0.01
+    config["training"]["accelerator"] = "cpu"
+    config["training"]["devices"] = 1
     config["quality_gates"]["smape_max"] = 100.0
     config["quality_gates"]["min_improvement_vs_best_baseline"] = -1.0
     return config
@@ -93,8 +95,30 @@ class TrainingTests(unittest.TestCase):
         self.assertIsInstance(tft_model, TFTModel)
 
     def test_tft_trainer_kwargs_enable_progress_bar(self):
-        trainer_kwargs = _tft_trainer_kwargs()
+        trainer_kwargs = _tft_trainer_kwargs(self.config)
         self.assertTrue(trainer_kwargs["enable_progress_bar"])
+
+    @patch("pipeline.training.torch.cuda.is_available", return_value=False)
+    def test_tft_trainer_kwargs_fall_back_to_cpu_when_gpu_unavailable(self, _mock_cuda):
+        config = _lightweight_tft_config()
+        config["training"]["accelerator"] = "gpu"
+        config["training"]["devices"] = 1
+
+        trainer_kwargs = _tft_trainer_kwargs(config)
+
+        self.assertEqual(trainer_kwargs["accelerator"], "cpu")
+        self.assertEqual(trainer_kwargs["devices"], 1)
+
+    @patch("pipeline.training.torch.cuda.is_available", return_value=True)
+    def test_tft_trainer_kwargs_use_gpu_when_available(self, _mock_cuda):
+        config = _lightweight_tft_config()
+        config["training"]["accelerator"] = "auto"
+        config["training"]["devices"] = 1
+
+        trainer_kwargs = _tft_trainer_kwargs(config)
+
+        self.assertEqual(trainer_kwargs["accelerator"], "gpu")
+        self.assertEqual(trainer_kwargs["devices"], 1)
 
     @patch("pipeline.training.TFTModel")
     def test_train_tft_uses_verbose_fit(self, mock_tft_model):
@@ -105,6 +129,16 @@ class TrainingTests(unittest.TestCase):
 
         self.assertTrue(mock_tft_model.call_args.kwargs["pl_trainer_kwargs"]["enable_progress_bar"])
         self.assertTrue(model_instance.fit.call_args.kwargs["verbose"])
+
+    @patch("pipeline.training.TFTModel")
+    def test_train_tft_passes_resolved_trainer_kwargs(self, mock_tft_model):
+        model_instance = MagicMock()
+        mock_tft_model.return_value = model_instance
+
+        train_tft(self.series_data, self.config)
+
+        self.assertEqual(mock_tft_model.call_args.kwargs["pl_trainer_kwargs"]["accelerator"], "cpu")
+        self.assertEqual(mock_tft_model.call_args.kwargs["pl_trainer_kwargs"]["devices"], 1)
 
     def test_train_tft_predict_returns_probabilistic_forecast(self):
         tft_model = train_tft(self.series_data, self.config)

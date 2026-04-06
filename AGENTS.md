@@ -35,6 +35,7 @@ Required forecast contract:
 - Negative revenue values are valid; do not require log-transform.
 - Use a fixed history window of `60` weeks.
 - For library, framework, and API usage questions, use Context7 documentation by default when available.
+- Python docstrings must be written in Russian.
 
 ## Agent Roles
 

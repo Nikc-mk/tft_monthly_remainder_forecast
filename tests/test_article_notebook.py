@@ -50,6 +50,18 @@ class ArticleNotebookStructureTests(unittest.TestCase):
         ]
         for snippet in required_snippets:
             self.assertIn(snippet, self.sources)
+        self.assertNotIn('df["is_holiday_week"] = 0', self.sources)
+
+    def test_notebook_uses_ru_holidays_for_holiday_counts(self):
+        required_snippets = [
+            "import holidays",
+            'ru_holidays = holidays.country_holidays("RU")',
+            'week_holidays = pd.date_range(row["date"], periods=7, freq="D")',
+            'holiday_count = sum(day in ru_holidays for day in week_holidays)',
+            'df["is_holiday_week"] = df.apply(count_ru_holidays_in_week, axis=1)',
+        ]
+        for snippet in required_snippets:
+            self.assertIn(snippet, self.sources)
 
     def test_notebook_uses_darts_grouped_series_and_scalers(self):
         required_snippets = [
@@ -61,6 +73,21 @@ class ArticleNotebookStructureTests(unittest.TestCase):
             "StaticCovariatesTransformer(",
             "StandardScaler()",
             "MinMaxScaler(feature_range=(0, 1))",
+        ]
+        for snippet in required_snippets:
+            self.assertIn(snippet, self.sources)
+
+    def test_notebook_contains_russian_explanatory_comments(self):
+        required_snippets = [
+            "# Читаем weekly-датасет проекта и приводим даты к ISO-неделям",
+            "# Восстанавливаем полный недельный грид по каждому городу",
+            "# Календарные признаки известны на всём горизонте прогноза",
+            "# Считаем число праздничных дней РФ внутри каждой ISO-недели",
+            "# Лаги и rolling считаем только после shift(1), чтобы не было утечки",
+            "# Добавляем будущие недели только для future covariates",
+            "# Масштабируем ряды по аналогии со статьёй, но под weekly-контракт проекта",
+            "# Делаем article-style split с параметрами проекта: 60 недель истории и 8 недель горизонта",
+            "# Обучаем TFT в конфигурации, близкой к статье, но адаптированной под weekly revenue",
         ]
         for snippet in required_snippets:
             self.assertIn(snippet, self.sources)

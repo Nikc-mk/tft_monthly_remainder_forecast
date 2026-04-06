@@ -1,4 +1,4 @@
-"""Weekly data preparation utilities for the city forecasting runtime."""
+"""Утилиты подготовки недельных данных для рантайма прогнозирования по городам."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ FUTURE_FEATURES = ["week_of_year", "month", "quarter", "year", "is_holiday_week"
 
 
 def validate_raw_frame(raw_df: pd.DataFrame, config: dict) -> None:
-    """Validate the raw weekly sales frame against the configured input schema."""
+    """Проверить исходный недельный датасет продаж на соответствие входной схеме."""
     required = {
         config["data"]["time_column"],
         config["data"]["group_column"],
@@ -24,7 +24,7 @@ def validate_raw_frame(raw_df: pd.DataFrame, config: dict) -> None:
 
 
 def get_last_complete_week(reference_ts: pd.Timestamp | None = None) -> pd.Timestamp:
-    """Return the Monday of the latest fully closed ISO week for a reference timestamp."""
+    """Вернуть понедельник последней полностью закрытой ISO-недели для опорного времени."""
     ts = pd.Timestamp.now(tz="UTC") if reference_ts is None else pd.Timestamp(reference_ts)
     ts = ts.tz_localize(None) if ts.tzinfo is not None else ts
     current_monday = ts.normalize() - pd.to_timedelta(ts.weekday(), unit="D")
@@ -37,7 +37,7 @@ def _to_week_start(series: pd.Series) -> pd.Series:
 
 
 def _normalize_weekly_frame(raw_df: pd.DataFrame, config: dict) -> pd.DataFrame:
-    """Build a complete city-week grid with duplicate aggregation and missing-week markers."""
+    """Построить полный грид город-неделя с агрегацией дублей и отметками пропусков."""
     validate_raw_frame(raw_df, config)
     frame = raw_df.copy()
     time_col = config["data"]["time_column"]
@@ -94,7 +94,7 @@ def _add_calendar_features(frame: pd.DataFrame, config: dict) -> pd.DataFrame:
 
 
 def _add_past_features(frame: pd.DataFrame) -> pd.DataFrame:
-    """Add lag and rolling features using shift(1) to remain leakage-safe."""
+    """Добавить лаги и скользящие признаки через shift(1), чтобы избежать утечки."""
     frame = frame.copy()
     by_city = frame.groupby("City")["weekly_revenue"]
     shifted = by_city.shift(1)
@@ -118,7 +118,7 @@ def _build_feature_frame(raw_df: pd.DataFrame, config: dict, forecast_week: pd.T
 
 
 def build_training_frame(raw_df: pd.DataFrame, config: dict) -> pd.DataFrame:
-    """Return the feature frame used for training and rolling validation, excluding the final 8-week holdout."""
+    """Вернуть фрейм признаков для обучения и rolling-валидации без финального holdout на 8 недель."""
     frame = _build_feature_frame(raw_df, config)
     max_week = frame["week_start"].max()
     holdout_start = max_week - pd.Timedelta(weeks=7)
@@ -126,7 +126,7 @@ def build_training_frame(raw_df: pd.DataFrame, config: dict) -> pd.DataFrame:
 
 
 def build_test_frame(raw_df: pd.DataFrame, config: dict) -> pd.DataFrame:
-    """Return the final 8 fully closed weeks reserved as the post-validation holdout."""
+    """Вернуть последние 8 полностью закрытых недель, выделенных под holdout после валидации."""
     frame = _build_feature_frame(raw_df, config)
     max_week = frame["week_start"].max()
     holdout_start = max_week - pd.Timedelta(weeks=7)
@@ -138,7 +138,7 @@ def build_inference_frame(
     config: dict,
     forecast_week: pd.Timestamp | None = None,
 ) -> pd.DataFrame:
-    """Return observed history plus future calendar covariates for the selected forecast week."""
+    """Вернуть наблюдаемую историю и будущие календарные ковариаты для выбранной недели прогноза."""
     selected_week = get_last_complete_week() if forecast_week is None else pd.Timestamp(forecast_week).normalize()
     observed_frame = _build_feature_frame(raw_df, config, forecast_week=selected_week)
 
@@ -182,7 +182,7 @@ def _encode_numeric_static_covariates(series_by_city: dict[str, TimeSeries]) -> 
 
 
 def build_darts_series(frame: pd.DataFrame, config: dict) -> dict[str, object]:
-    """Convert the prepared weekly frame into city-keyed Darts target and covariate series."""
+    """Преобразовать подготовленный недельный фрейм в Darts-серии цели и ковариат по городам."""
     fill_value = float(config["data"]["fill_missing_revenue"])
     observed_frame = frame.loc[frame["weekly_revenue"].notna()].copy()
     past_frame = observed_frame.copy()

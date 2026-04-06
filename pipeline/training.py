@@ -1,4 +1,4 @@
-"""Training, backtesting, and holdout evaluation helpers for the weekly runtime."""
+"""Вспомогательные функции обучения, бэктеста и оценки holdout для недельного рантайма."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from types import MethodType
 
 import numpy as np
 import pandas as pd
+import torch
 from darts import TimeSeries
 from darts.models.forecasting.tft_model import TFTModel
 from darts.utils.likelihood_models import QuantileRegression
@@ -19,7 +20,7 @@ TFT_PREDICT_SAMPLES = 100
 
 @dataclass
 class RuntimeTFTScalers:
-    """Per-city and global scalers used to stabilize TFT training and inference."""
+    """Скейлеры по городам и глобальные скейлеры для стабилизации обучения и инференса TFT."""
 
     city_by_code: dict[float, str]
     target_scalers_by_city: dict[str, StandardScaler]
@@ -198,7 +199,7 @@ def _predict_with_runtime_scaling(
 
 @dataclass
 class SeasonalNaiveModel:
-    """Repeat the most recent seasonal block as the next forecast horizon."""
+    """Повторять последний сезонный блок как прогноз на следующий горизонт."""
 
     series_by_city: dict[str, TimeSeries]
 
@@ -216,7 +217,7 @@ class SeasonalNaiveModel:
 
 @dataclass
 class RollingMeanModel:
-    """Forecast with the mean of the latest observed values."""
+    """Строить прогноз по среднему значению последних наблюдений."""
 
     series_by_city: dict[str, TimeSeries]
     window: int = 4
@@ -232,10 +233,21 @@ class RollingMeanModel:
         return _timeseries_from_prediction(target_series, forecast)
 
 
-def _tft_trainer_kwargs() -> dict[str, object]:
+def _resolve_tft_training_device(config: dict) -> tuple[str, int]:
+    requested_accelerator = str(config["training"].get("accelerator", "auto")).lower()
+    requested_devices = int(config["training"].get("devices", 1))
+    if requested_accelerator == "cpu":
+        return "cpu", 1
+    if torch.cuda.is_available():
+        return "gpu", requested_devices
+    return "cpu", 1
+
+
+def _tft_trainer_kwargs(config: dict) -> dict[str, object]:
+    accelerator, devices = _resolve_tft_training_device(config)
     return {
-        "accelerator": "cpu",
-        "devices": 1,
+        "accelerator": accelerator,
+        "devices": devices,
         "enable_progress_bar": True,
         "logger": False,
         "enable_model_summary": False,
@@ -268,7 +280,7 @@ def _predict_tft_quantiles(
 
 
 def train_baselines(series_data: dict[str, object], config: dict) -> dict[str, object]:
-    """Create baseline forecasting models over the prepared city-keyed Darts series."""
+    """Создать базовые модели прогноза поверх подготовленных Darts-серий по городам."""
     del config
     series_by_city = series_data["target_series_by_city"]
     return {
@@ -278,7 +290,7 @@ def train_baselines(series_data: dict[str, object], config: dict) -> dict[str, o
 
 
 def train_tft(series_data: dict[str, object], config: dict) -> TFTModel:
-    """Train a real Darts TFTModel on the prepared city-level weekly series."""
+    """Обучить реальную модель Darts TFTModel на подготовленных недельных сериях по городам."""
     runtime_tft_scalers = _fit_runtime_tft_scalers(series_data)
     scaled_series_data = _scale_series_data_for_tft(series_data, runtime_tft_scalers)
     tft_model = TFTModel(
@@ -296,7 +308,7 @@ def train_tft(series_data: dict[str, object], config: dict) -> TFTModel:
         force_reset=True,
         save_checkpoints=False,
         optimizer_kwargs={"lr": float(config["training"]["learning_rate"])},
-        pl_trainer_kwargs=_tft_trainer_kwargs(),
+        pl_trainer_kwargs=_tft_trainer_kwargs(config),
     )
     tft_model.fit(
         series=list(scaled_series_data["target_series_by_city"].values()),
@@ -319,7 +331,7 @@ def run_backtest(
     baselines: dict[str, object],
     config: dict,
 ) -> pd.DataFrame:
-    """Run a rolling weekly backtest and return per-city, per-window SMAPE scores."""
+    """Запустить rolling weekly backtest и вернуть SMAPE по городам и окнам."""
     rows: list[dict[str, object]] = []
     horizon = int(config["training"]["max_prediction_length"])
     windows = int(config["training"]["backtest_windows"])
@@ -370,7 +382,7 @@ def run_backtest(
 
 
 def evaluate_holdout(test_frame: pd.DataFrame, tft_model, baselines: dict[str, object], config: dict) -> pd.DataFrame:
-    """Evaluate the final 8-week holdout against trained baselines and the real TFT model."""
+    """Оценить финальный holdout на 8 недель относительно базовых моделей и реального TFT."""
     rows: list[dict[str, object]] = []
     horizon = int(config["training"]["max_prediction_length"])
     for city, city_frame in test_frame.groupby("City", sort=True):
@@ -405,7 +417,7 @@ def evaluate_holdout(test_frame: pd.DataFrame, tft_model, baselines: dict[str, o
 
 
 def check_quality_gates(backtest_df: pd.DataFrame, config: dict) -> None:
-    """Validate the configured SMAPE and improvement gates on backtest results."""
+    """Проверить настроенные пороги SMAPE и улучшения на результатах бэктеста."""
     grouped = backtest_df.groupby("model_name", as_index=False)["smape"].mean()
     best_baseline = grouped.loc[grouped["model_name"] != "tft", "smape"].min()
     tft_smape = grouped.loc[grouped["model_name"] == "tft", "smape"].iloc[0]

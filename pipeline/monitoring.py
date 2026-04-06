@@ -1,4 +1,4 @@
-"""Monitoring summaries and visual artifacts for the weekly forecasting runtime."""
+"""Сводки мониторинга и визуальные артефакты для недельного рантайма прогнозирования."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ def build_monitoring_summary(
     config: dict,
     runtime_seconds: float | None = None,
 ) -> dict:
-    """Build a compact monitoring summary for quality gates, holdout MAPE, and SLA status."""
+    """Собрать компактную сводку мониторинга по quality gates, holdout MAPE и статусу SLA."""
     best_baseline = (
         backtest_df.loc[backtest_df["model_name"] != "tft"]
         .groupby("model_name")["smape"]
@@ -554,7 +554,7 @@ def _render_holdout_city_html_report(city_payload: dict[str, dict[str, object]])
 
 
 def save_holdout_city_html_report(holdout_df: pd.DataFrame, output_dir: str | Path) -> Path:
-    """Save a self-contained HTML report for weekly holdout inspection by city."""
+    """Сохранить автономный HTML-отчет для просмотра недельного holdout по городам."""
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     report_path = output_path / "holdout_city_report.html"
@@ -569,7 +569,7 @@ def save_visual_artifacts(
     config: dict,
     tft_model: object | None = None,
 ) -> list[Path]:
-    """Save PNG holdout MAPE charts for model-level and city-level monitoring."""
+    """Сохранить PNG-графики holdout MAPE для мониторинга на уровне моделей и городов."""
     del config
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
