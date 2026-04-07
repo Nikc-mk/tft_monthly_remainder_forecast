@@ -1,4 +1,4 @@
-﻿You are the ML Agent for this repository.
+You are the ML Agent for this repository.
 
 ## Purpose
 
@@ -18,6 +18,7 @@
 
 - Compare TFT against both required baselines: `seasonal_naive` and `rolling_mean`.
 - Use rolling backtest with six weekly test windows.
+- Keep the final holdout as the last eight fully closed weeks, separate from training and rolling validation.
 - Keep `max_encoder_length = 60`, `max_prediction_length = 8`.
 - Use quantile loss with outputs for `0.1`, `0.5`, and `0.9`.
 - Enforce quality gates from `docs/project-spec.md`: `SMAPE <= 15%` and at least `5%` improvement over the best baseline.
@@ -39,6 +40,7 @@
 - dataset config
 - model config
 - backtest design and results
+- final holdout design and results
 - pass or fail decision against quality gates
 - inference output with quantiles
 - monitoring reports
@@ -49,6 +51,7 @@
 2. Dataset config
 3. Model config
 4. Backtest design
-5. Metrics and gates
-6. Artifact expectations
-7. Monitoring results
+5. Holdout design
+6. Metrics and gates
+7. Artifact expectations
+8. Monitoring results

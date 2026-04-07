@@ -20,9 +20,10 @@ Use this skill for the runtime path after model training. Optimize for direct ba
 1. Confirm the runtime artifacts: model checkpoint, scaler config, feature pipeline config, and inference entrypoint.
 2. Design batch inference across all `City` values at once.
 3. Keep prediction direct on the weekly target, not autoregressive over future weeks.
-4. Define the output contract for `q0.1`, `q0.5`, and `q0.9`.
-5. Add handling for negative values, missing weeks, and cold-start cities.
-6. Define monitoring for drift, SMAPE degradation, and quantile coverage.
+4. Define the output contract as one row per `City + target_week` with `forecast_week`, `target_week`, `horizon_week`, `City`, `q0.1`, `q0.5`, `q0.9`, `model_version`, `feature_version`, and `generated_at`.
+5. Confirm the required runtime outputs: `forecast.csv`, `holdout_predictions.csv`, `monitoring_summary.json`, and the monitoring PNG artifacts from the stored spec.
+6. Add handling for negative values, missing weeks, and cold-start cities.
+7. Define monitoring for drift, SMAPE degradation, and quantile coverage.
 
 ## Runtime Rules
 

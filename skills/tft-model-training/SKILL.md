@@ -7,7 +7,7 @@ description: Design and review baseline models, TFT training, and rolling backte
 
 ## Overview
 
-Use this skill for model design and evaluation after the data contract is fixed. Keep the focus on baseline comparison, rolling weekly validation, and release gates instead of one-off leaderboard improvements.
+Use this skill for model design and evaluation after the data contract is fixed. Keep the focus on baseline comparison, rolling weekly validation, final holdout discipline, and release gates instead of one-off leaderboard improvements.
 
 ## Required Sources
 
@@ -19,17 +19,20 @@ Use this skill for model design and evaluation after the data contract is fixed.
 
 1. Confirm that the input dataset matches the normalized weekly contract.
 2. Define and evaluate the required baselines.
-3. Configure the training dataset using the specified target, group id, encoder length, and feature groups.
-4. Configure TFT with quantile outputs for `0.1`, `0.5`, and `0.9`.
-5. Run rolling backtests on the last six weekly windows.
-6. Report `SMAPE`, `MAE`, and coverage metrics against the acceptance gates.
+3. Keep the final holdout as the last eight fully closed weeks, separate from both training and rolling validation.
+4. Configure the training dataset using the specified target, `City` grouping, encoder length, history window, and allowed feature groups.
+5. Prefer `darts` abstractions for forecasting and backtesting when they cover the required runtime task.
+6. Configure TFT with quantile outputs for `0.1`, `0.5`, and `0.9`.
+7. Run rolling backtests on the last six weekly windows before the final holdout.
+8. Report `SMAPE`, `MAE`, and coverage metrics against the acceptance gates.
 
 ## Required Training Rules
 
 - Keep `max_encoder_length = 60`.
 - Keep `max_prediction_length = 8`.
-- Use `GroupNormalizer(groups=["City"])` unless the spec changes.
-- Use quantile loss and `output_size = 3`.
+- Keep the final holdout outside both training and rolling validation.
+- Prefer `darts` for forecasting, backtesting, and related runtime orchestration when the library covers the task.
+- Use quantile outputs for `q0.1`, `q0.5`, and `q0.9`.
 - Preserve support for negative values with robust scaling behavior.
 - Do not replace rolling backtests with a single validation split.
 
@@ -48,6 +51,7 @@ Return:
 - dataset config
 - model config
 - backtest design
+- holdout design
 - metrics
 - gate decision
 - artifact expectations

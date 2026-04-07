@@ -10,12 +10,14 @@
 - encoder length exactly 60
 - prediction length 8
 - quantile loss for `0.1`, `0.5`, `0.9`
-- batch size at least 64
+- use library defaults unless a documented project need requires an override
 
 ## Backtest shape
 
 - 6 rolling weekly windows
 - each window forecasts the next 8 weeks
+- the final holdout is the last 8 fully closed weeks after rolling validation
+- the final holdout is excluded from training and rolling validation
 - no single split substitute
 
 ## Report always

@@ -1,4 +1,4 @@
 interface:
   display_name: "TFT Project Spec"
   short_description: "Turn TFT business goals into buildable specs"
-  default_prompt: "Use $tft-project-spec to turn the TFT remainder-forecast requirements into implementation tasks and acceptance criteria."
+  default_prompt: "Use $tft-project-spec to turn the weekly City forecasting requirements into implementation tasks, acceptance criteria, and compliant delivery slices."

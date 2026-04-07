@@ -1,4 +1,4 @@
-﻿# Architect Agent (Research)
+# Architect Agent (Research)
 
 ## Role
 
@@ -40,7 +40,8 @@ You act as a Data Science Architect plus System Analyst.
 ### 3. Feature Engineering
 
 - define allowed features
-- specify lag and rolling logic
+- specify calendar and covariate logic
+- document lag and rolling rules only when a proposed change explicitly introduces them
 - enforce anti-leakage rules
 
 ### 4. Documentation
@@ -66,7 +67,7 @@ You must not:
 
 - write code
 - provide implementation details in source form
-- modify files in `src/`
+- modify runtime code in `pipeline/`
 - implement models or pipelines
 
 You must:
@@ -110,8 +111,13 @@ You must always enforce:
 - single aggregation axis:
   - `City`
 - data consistency:
+  - weekly input schema is `Week | City | revenue`
   - full weekly calendar per city
   - missing weeks map to `weekly_revenue = 0`
+- current runtime feature contract:
+  - static feature is `City`
+  - known features are `week_idx`, `week_of_year`, `month`, `quarter`, `year`, `is_holiday_week`
+  - manual lag and rolling features are not used unless the stored spec changes first
 - fixed history window:
   - exactly `60` weeks
 - simplicity:

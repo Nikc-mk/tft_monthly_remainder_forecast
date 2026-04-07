@@ -27,7 +27,10 @@ Use this skill to ground work in the repository spec before implementation start
 
 - The only valid target is weekly `sum(revenue)` by `City` for future ISO weeks.
 - Leakage is never acceptable in target construction or feature engineering.
+- The canonical input contract is weekly `Week | City | revenue`, normalized into `week_start | week_idx | City | weekly_revenue | is_missing`.
+- The current weekly runtime uses `City` plus known calendar covariates and does not require manual lag or rolling features.
 - Rolling weekly backtesting is mandatory.
+- The final holdout is the last 8 fully closed weeks and stays outside training and rolling validation.
 - TFT must beat the best baseline by at least 5 percent on SMAPE.
 - Inference must stay batch-oriented and non-autoregressive.
 
